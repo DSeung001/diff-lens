@@ -3,10 +3,10 @@ import { type DiffResult, type DiffRow, type RowSide } from "../diff/types";
 
 interface DiffResultViewProps {
   result: DiffResult;
-  before: string;
-  after: string;
-  onBeforeChange: (value: string) => void;
-  onAfterChange: (value: string) => void;
+  beforeText: string;
+  afterText: string;
+  onBeforeTextChange: (value: string) => void;
+  onAfterTextChange: (value: string) => void;
   onEdit: () => void;
   onSwap: () => void;
 }
@@ -18,8 +18,43 @@ const statusIcon: Record<DiffRow["status"], string> = {
   modified: "~",
 };
 
-function SideCell({ side, status }: { side: RowSide; status: DiffRow["status"] }) {
+interface SideCellProps {
+  side: RowSide;
+  status: DiffRow["status"];
+  editable: boolean;
+  isEditing: boolean;
+  onStartEdit: () => void;
+  onEndEdit: () => void;
+  onCommit: (nextText: string) => void;
+}
+
+function SideCell({
+  side,
+  status,
+  editable,
+  isEditing,
+  onStartEdit,
+  onEndEdit,
+  onCommit,
+}: SideCellProps) {
   const isPlaceholder = side.text === null;
+  const displayText = side.text ?? "";
+  const editableClass = editable ? " editable" : "";
+
+  if (!editable) {
+    return (
+      <div className={`diff-line status-${status}${isPlaceholder ? " placeholder" : ""}`}>
+        <span className="gutter" aria-hidden={side.lineNumber === null}>
+          {side.lineNumber ?? ""}
+        </span>
+        <span className="marker" aria-hidden="true">
+          {statusIcon[status]}
+        </span>
+        <code className="content">{displayText}</code>
+      </div>
+    );
+  }
+
   return (
     <div className={`diff-line status-${status}${isPlaceholder ? " placeholder" : ""}`}>
       <span className="gutter" aria-hidden={side.lineNumber === null}>
@@ -28,14 +63,31 @@ function SideCell({ side, status }: { side: RowSide; status: DiffRow["status"] }
       <span className="marker" aria-hidden="true">
         {statusIcon[status]}
       </span>
-      <code className="content">
-        {side.segments
-          ? side.segments.map((seg, i) => (
-              <span key={i} className={seg.changed ? "inline-changed" : undefined}>
-                {seg.text}
-              </span>
-            ))
-          : side.text}
+      <code
+        className={`content content-editable${editableClass}`}
+        contentEditable={true}
+        suppressContentEditableWarning={true}
+        onFocus={onStartEdit}
+        onBlur={(e) => {
+          onCommit(e.currentTarget.textContent ?? "");
+          onEndEdit();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            (e.currentTarget as HTMLElement).blur();
+          }
+        }}
+      >
+        {isEditing
+          ? displayText
+          : side.segments
+            ? side.segments.map((seg, i) => (
+                <span key={i} className={seg.changed ? "inline-changed" : undefined}>
+                  {seg.text}
+                </span>
+              ))
+            : displayText}
       </code>
     </div>
   );
@@ -43,10 +95,10 @@ function SideCell({ side, status }: { side: RowSide; status: DiffRow["status"] }
 
 export function DiffResultView({
   result,
-  before,
-  after,
-  onBeforeChange,
-  onAfterChange,
+  beforeText,
+  afterText,
+  onBeforeTextChange,
+  onAfterTextChange,
   onEdit,
   onSwap,
 }: DiffResultViewProps) {
@@ -54,6 +106,7 @@ export function DiffResultView({
   const leftRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
   const [current, setCurrent] = useState(0);
+  const [editingCell, setEditingCell] = useState<string | null>(null);
 
   // First row index for each change block, used to scroll into view.
   const blockRowIndex = useMemo(() => {
@@ -103,6 +156,50 @@ export function DiffResultView({
     leftRef.current?.scrollTo({ top: target, behavior: "smooth" });
   };
 
+  const updatePaneLine = (
+    sourceText: string,
+    rowIndex: number,
+    lineNumber: number | null,
+    side: "left" | "right",
+    nextText: string,
+  ) => {
+    const lines = sourceText.length > 0 ? sourceText.split("\n") : [];
+    const normalized = nextText.replace(/\r?\n/g, "");
+
+    if (lineNumber !== null) {
+      const targetIdx = Math.max(0, lineNumber - 1);
+      while (lines.length <= targetIdx) {
+        lines.push("");
+      }
+      lines[targetIdx] = normalized;
+      return lines.join("\n");
+    }
+
+    const linesBefore = rows
+      .slice(0, rowIndex)
+      .filter((row) => (side === "left" ? row.left.lineNumber : row.right.lineNumber) !== null)
+      .length;
+    lines.splice(linesBefore, 0, normalized);
+    return lines.join("\n");
+  };
+
+  const commitCellEdit = (
+    side: "left" | "right",
+    rowIndex: number,
+    lineNumber: number | null,
+    nextText: string,
+  ) => {
+    if (lineNumber === null && nextText.trim().length === 0) {
+      return;
+    }
+
+    if (side === "left") {
+      onBeforeTextChange(updatePaneLine(beforeText, rowIndex, lineNumber, side, nextText));
+      return;
+    }
+    onAfterTextChange(updatePaneLine(afterText, rowIndex, lineNumber, side, nextText));
+  };
+
   return (
     <div className="result-view">
       <div className="result-toolbar">
@@ -139,39 +236,23 @@ export function DiffResultView({
         </div>
       </div>
 
-      <div className="result-edit-grid">
-        <div className="result-edit-col">
-          <label className="editor-label" htmlFor="result-before">
-            Before <span className="muted">(editable)</span>
-          </label>
-          <textarea
-            id="result-before"
-            className="editor result-editor"
-            value={before}
-            spellCheck={false}
-            onChange={(e) => onBeforeChange(e.target.value)}
-          />
-        </div>
-        <div className="result-edit-col">
-          <label className="editor-label" htmlFor="result-after">
-            After <span className="muted">(editable)</span>
-          </label>
-          <textarea
-            id="result-after"
-            className="editor result-editor"
-            value={after}
-            spellCheck={false}
-            onChange={(e) => onAfterChange(e.target.value)}
-          />
-        </div>
-      </div>
-
       <div className="diff-panels">
         <div className="diff-pane" ref={leftRef}>
           <div className="pane-header">Before</div>
           <div className="pane-body">
             {rows.map((row, i) => (
-              <SideCell key={i} side={row.left} status={row.status} />
+              <SideCell
+                key={i}
+                side={row.left}
+                status={row.status}
+                editable={true}
+                isEditing={editingCell === `left-${i}`}
+                onStartEdit={() => setEditingCell(`left-${i}`)}
+                onEndEdit={() => setEditingCell(null)}
+                onCommit={(nextText) =>
+                  commitCellEdit("left", i, row.left.lineNumber, nextText)
+                }
+              />
             ))}
           </div>
         </div>
@@ -179,7 +260,18 @@ export function DiffResultView({
           <div className="pane-header">After</div>
           <div className="pane-body">
             {rows.map((row, i) => (
-              <SideCell key={i} side={row.right} status={row.status} />
+              <SideCell
+                key={i}
+                side={row.right}
+                status={row.status}
+                editable={true}
+                isEditing={editingCell === `right-${i}`}
+                onStartEdit={() => setEditingCell(`right-${i}`)}
+                onEndEdit={() => setEditingCell(null)}
+                onCommit={(nextText) =>
+                  commitCellEdit("right", i, row.right.lineNumber, nextText)
+                }
+              />
             ))}
           </div>
         </div>

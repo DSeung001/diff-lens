@@ -15,8 +15,8 @@ All comparison happens **in your browser**. Your text is never uploaded anywhere
 - Synchronized scrolling between the two panels
 - Change navigation (Prev / Next, `n / m changes`)
 - Swap left/right, clear, and return-to-edit
-- Edit *Before* / *After* directly from the result view
-- Saved comparisons sidebar (date + first-line title)
+- Edit directly on the rendered comparison lines in result view
+- Left collapsible saved-comparisons sidebar (date + first-line title)
 - Compressed browser persistence (`localStorage` + UTF-16 compression)
 - Comparison options: trim whitespace, ignore all whitespace, ignore blank
   lines, ignore case
