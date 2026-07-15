@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { InputPanel } from "./components/InputPanel";
 import { DiffResultView } from "./components/DiffResultView";
+import { SavedComparisonsSidebar } from "./components/SavedComparisonsSidebar";
 import { computeDiff } from "./diff/engine";
-import { defaultOptions, type DiffOptions, type DiffResult } from "./diff/types";
+import {
+  defaultOptions,
+  type DiffOptions,
+  type DiffResult,
+  type SavedComparison,
+} from "./diff/types";
+import {
+  persistSavedComparisons,
+  readSavedComparisons,
+} from "./storage/savedComparisons";
 
 type View = "input" | "result";
 type Theme = "light" | "dark";
@@ -25,6 +35,8 @@ export default function App() {
   const [after, setAfter] = useState(sampleAfter);
   const [options, setOptions] = useState<DiffOptions>(defaultOptions);
   const [result, setResult] = useState<DiffResult | null>(null);
+  const [savedComparisons, setSavedComparisons] = useState<SavedComparison[]>([]);
+  const [storageError, setStorageError] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>(
     () =>
       (typeof window !== "undefined" &&
@@ -36,6 +48,12 @@ export default function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+
+  useEffect(() => {
+    const { items, error } = readSavedComparisons();
+    setSavedComparisons(items);
+    setStorageError(error);
+  }, []);
 
   // Recompute when returning to the result view or toggling options.
   const compare = () => {
@@ -63,6 +81,47 @@ export default function App() {
     setResult(null);
   };
 
+  const saveCurrent = () => {
+    const next: SavedComparison[] = [
+      {
+        id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()),
+        createdAt: new Date().toISOString(),
+        before,
+        after,
+        options,
+      },
+      ...savedComparisons,
+    ];
+    const error = persistSavedComparisons(next);
+    if (error) {
+      setStorageError(error);
+      return;
+    }
+    setSavedComparisons(next);
+    setStorageError(null);
+  };
+
+  const loadSaved = (id: string) => {
+    const target = savedComparisons.find((item) => item.id === id);
+    if (!target) return;
+    setBefore(target.before);
+    setAfter(target.after);
+    setOptions(target.options);
+    setResult(computeDiff(target.before, target.after, target.options));
+    setView("result");
+  };
+
+  const deleteSaved = (id: string) => {
+    const next = savedComparisons.filter((item) => item.id !== id);
+    const error = persistSavedComparisons(next);
+    if (error) {
+      setStorageError(error);
+      return;
+    }
+    setSavedComparisons(next);
+    setStorageError(null);
+  };
+
   return (
     <div className="app">
       <header className="app-header">
@@ -83,25 +142,39 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        {view === "input" || !liveResult ? (
-          <InputPanel
-            before={before}
-            after={after}
-            options={options}
-            onBeforeChange={setBefore}
-            onAfterChange={setAfter}
-            onOptionsChange={setOptions}
-            onCompare={compare}
-            onSwap={swap}
-            onClear={clear}
-          />
-        ) : (
-          <DiffResultView
-            result={liveResult}
-            onEdit={() => setView("input")}
-            onSwap={swap}
-          />
-        )}
+        <section className="main-content">
+          {view === "input" || !liveResult ? (
+            <InputPanel
+              before={before}
+              after={after}
+              options={options}
+              onBeforeChange={setBefore}
+              onAfterChange={setAfter}
+              onOptionsChange={setOptions}
+              onCompare={compare}
+              onSwap={swap}
+              onClear={clear}
+            />
+          ) : (
+            <DiffResultView
+              result={liveResult}
+              before={before}
+              after={after}
+              onBeforeChange={setBefore}
+              onAfterChange={setAfter}
+              onEdit={() => setView("input")}
+              onSwap={swap}
+            />
+          )}
+        </section>
+
+        <SavedComparisonsSidebar
+          items={savedComparisons}
+          errorMessage={storageError}
+          onSaveCurrent={saveCurrent}
+          onLoad={loadSaved}
+          onDelete={deleteSaved}
+        />
       </main>
     </div>
   );

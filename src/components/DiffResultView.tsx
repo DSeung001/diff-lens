@@ -3,6 +3,10 @@ import { type DiffResult, type DiffRow, type RowSide } from "../diff/types";
 
 interface DiffResultViewProps {
   result: DiffResult;
+  before: string;
+  after: string;
+  onBeforeChange: (value: string) => void;
+  onAfterChange: (value: string) => void;
   onEdit: () => void;
   onSwap: () => void;
 }
@@ -37,7 +41,15 @@ function SideCell({ side, status }: { side: RowSide; status: DiffRow["status"] }
   );
 }
 
-export function DiffResultView({ result, onEdit, onSwap }: DiffResultViewProps) {
+export function DiffResultView({
+  result,
+  before,
+  after,
+  onBeforeChange,
+  onAfterChange,
+  onEdit,
+  onSwap,
+}: DiffResultViewProps) {
   const { rows, changeCount } = result;
   const leftRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
@@ -124,6 +136,33 @@ export function DiffResultView({ result, onEdit, onSwap }: DiffResultViewProps) 
               ? "No changes"
               : `${current + 1} / ${changeCount} changes`}
           </span>
+        </div>
+      </div>
+
+      <div className="result-edit-grid">
+        <div className="result-edit-col">
+          <label className="editor-label" htmlFor="result-before">
+            Before <span className="muted">(editable)</span>
+          </label>
+          <textarea
+            id="result-before"
+            className="editor result-editor"
+            value={before}
+            spellCheck={false}
+            onChange={(e) => onBeforeChange(e.target.value)}
+          />
+        </div>
+        <div className="result-edit-col">
+          <label className="editor-label" htmlFor="result-after">
+            After <span className="muted">(editable)</span>
+          </label>
+          <textarea
+            id="result-after"
+            className="editor result-editor"
+            value={after}
+            spellCheck={false}
+            onChange={(e) => onAfterChange(e.target.value)}
+          />
         </div>
       </div>
 
