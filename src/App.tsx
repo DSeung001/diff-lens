@@ -37,6 +37,7 @@ export default function App() {
   const [result, setResult] = useState<DiffResult | null>(null);
   const [savedComparisons, setSavedComparisons] = useState<SavedComparison[]>([]);
   const [storageError, setStorageError] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<Theme>(
     () =>
       (typeof window !== "undefined" &&
@@ -141,7 +142,17 @@ export default function App() {
         </button>
       </header>
 
-      <main className="app-main">
+      <main className={`app-main ${isSidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
+        <SavedComparisonsSidebar
+          isOpen={isSidebarOpen}
+          items={savedComparisons}
+          errorMessage={storageError}
+          onToggle={() => setIsSidebarOpen((v) => !v)}
+          onSaveCurrent={saveCurrent}
+          onLoad={loadSaved}
+          onDelete={deleteSaved}
+        />
+
         <section className="main-content">
           {view === "input" || !liveResult ? (
             <InputPanel
@@ -158,23 +169,15 @@ export default function App() {
           ) : (
             <DiffResultView
               result={liveResult}
-              before={before}
-              after={after}
-              onBeforeChange={setBefore}
-              onAfterChange={setAfter}
+              beforeText={before}
+              afterText={after}
+              onBeforeTextChange={setBefore}
+              onAfterTextChange={setAfter}
               onEdit={() => setView("input")}
               onSwap={swap}
             />
           )}
         </section>
-
-        <SavedComparisonsSidebar
-          items={savedComparisons}
-          errorMessage={storageError}
-          onSaveCurrent={saveCurrent}
-          onLoad={loadSaved}
-          onDelete={deleteSaved}
-        />
       </main>
     </div>
   );
