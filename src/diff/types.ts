@@ -53,3 +53,11 @@ export interface DiffResult {
   /** Total number of change blocks (consecutive non-equal rows). */
   changeCount: number;
 }
+
+export interface SavedComparison {
+  id: string;
+  createdAt: string;
+  before: string;
+  after: string;
+  options: DiffOptions;
+}

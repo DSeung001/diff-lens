@@ -111,6 +111,13 @@ body {
 .app-main {
   flex: 1;
   min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.main-content {
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -248,6 +255,25 @@ body {
   flex-direction: column;
 }
 
+.result-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.result-edit-col {
+  min-width: 0;
+}
+
+.result-editor {
+  min-height: 96px;
+  max-height: 180px;
+  resize: vertical;
+}
+
 .result-toolbar {
   display: flex;
   align-items: center;
@@ -271,6 +297,95 @@ body {
   min-height: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
+}
+
+/* Saved sidebar */
+.saved-sidebar {
+  border-left: 1px solid var(--border);
+  background: var(--bg-elevated);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.saved-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.saved-sidebar-header h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.saved-error,
+.saved-empty {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.saved-error {
+  color: #b42318;
+}
+
+.saved-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: auto;
+}
+
+.saved-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.saved-item-main {
+  width: 100%;
+  text-align: left;
+  border: none;
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+}
+
+.saved-item-main:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.saved-item-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.saved-item-date {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.saved-delete {
+  width: calc(100% - 12px);
+  margin: 0 6px 6px;
+  font-size: 11px;
+  padding: 4px 8px;
 }
 
 .diff-pane {
@@ -384,6 +499,17 @@ body {
 
 /* Responsive: stack panels on narrow screens */
 @media (max-width: 720px) {
+  .app-main {
+    grid-template-columns: 1fr;
+  }
+
+  .saved-sidebar {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    max-height: 40vh;
+  }
+
+  .result-edit-grid,
   .editor-grid,
   .diff-panels {
     grid-template-columns: 1fr;
