@@ -43,9 +43,10 @@ The app deploys automatically to GitHub Pages via
 One-time setup: in the repo, go to **Settings → Pages → Build and deployment →
 Source** and select **GitHub Actions**.
 
-The site is served at `https://<user>.github.io/diff-lens/`. The base path is set
-in `vite.config.ts` (`/diff-lens/`) and can be overridden with the `BASE_PATH`
-environment variable when building for another host.
+Live site: https://dseung001.github.io/diff-lens/
+
+The base path is set in `vite.config.ts` (`/diff-lens/`) and can be overridden
+with the `BASE_PATH` environment variable when building for another host.
 
 ## Project structure
 
